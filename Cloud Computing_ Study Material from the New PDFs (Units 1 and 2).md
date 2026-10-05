@@ -562,3 +562,371 @@ flowchart TD
 - **Compute spectrum:** VMs → containers → PaaS → serverless (less control, more convenience).
 - **Storage:** object (S3), block (EBS), file (EFS). **Network:** DNS → CDN → load balancer → public subnet → private subnet.
 - **Kubernetes:** control plane (API server, etcd, scheduler, controller manager), worker node (kubelet, kube-proxy, runtime). Desired state in YAML, reconciliation loop.
+
+- # Cloud Computing: Study Material for Unit 3
+
+*Built from **Unit-3_new_IILM** (cloud storage, storage models, DFS, GFS, HDFS, replication and consistency, backup, DR, scalability, DevOps, ML on cloud, edge computing) and checked against **Module III: Cloud Storage & Data Management** of your syllabus. Topics the PDF misses are added in **Part B** (marked "Added for syllabus"). Errors in the PDF are listed in the last section.*
+
+---
+
+# PART A: Unit 3 (from the PDF)
+
+## Mind map
+
+```mermaid
+mindmap
+  root((Unit 3))
+    Cloud storage
+      Definition
+      Advantages
+      Disadvantages
+      Types
+      Providers
+    Storage models
+      File
+      Block or volume
+      Object
+    Distributed file systems
+      GFS
+      HDFS
+    Replication
+      Sync and async
+      Strategies
+      CAP theorem
+      Consistency models
+    Protection
+      Backup
+      Disaster recovery
+      Scalability
+    Modern topics
+      DevOps
+      ML on cloud
+      Edge computing
+    Added
+      Storage architecture
+      Hadoop and Spark
+```
+
+## 1. What is cloud storage?
+
+- Storing digital data in an **online space that spans multiple servers and locations**, usually maintained by a hosting company.
+- Data is kept **off-site** and accessed over the **public internet** or a **dedicated private network connection**.
+- The **provider hosts, secures, manages, and maintains** the servers and infrastructure, and ensures you can access data whenever needed.
+- **Example:** Google Drive.
+- **Two major providers (as per PDF):**
+  - **Amazon S3:** file storage across multiple servers, supports **file encryption**, data can be shared publicly.
+  - **Google Cloud:** very large scalable storage, can **resume a file transfer after a failure**.
+
+### Cloud storage providers
+
+| Category | Examples |
+| --- | --- |
+| **Free cloud storage** | Google Drive, OneDrive, Dropbox |
+| **Business cloud storage** | SpiderOak, Tresorit, Egnyte |
+
+## 2. Advantages of cloud storage
+
+| Advantage | Meaning |
+| --- | --- |
+| **Cost** | No hardware to buy. Much cheaper per GB than external drives |
+| **Accessibility** | Access files from anywhere with an internet connection |
+| **Recovery** | Works as a backup if a hard drive or hardware fails |
+| **Syncing and updating** | A change is synced across all your devices |
+| **Security** | Providers add extra security layers because many users depend on them |
+
+## 3. Disadvantages of cloud storage
+
+| Disadvantage | Meaning |
+| --- | --- |
+| **Internet dependency** | Slow or unstable connection makes access and sharing difficult |
+| **Third-party dependency** | Provider is responsible for your data, so check their security standards before choosing |
+| **High cost for huge data** | Cost rises sharply for large storage needs |
+| **Minimal control** | Provider manages the whole storage framework, customer has little control |
+
+## 4. Types of cloud storage
+
+| Type | Description | Example |
+| --- | --- | --- |
+| **Personal** | Subset of public cloud storage. Stores an individual's data, with syncing and sharing across devices | Apple iCloud |
+| **Public** | Enterprise and provider are separate. **No cloud resources inside the enterprise data center**. Provider fully manages it | Amazon S3, Azure Blob |
+| **Private** | Enterprise and provider are **integrated in the enterprise's own data center**. Solves security and performance concerns while keeping cloud benefits | In-house cloud |
+| **Hybrid** | Public + private. **Critical data in private cloud, other data in public cloud** | Mixed enterprise setup |
+
+## 5. Cloud storage models
+
+- **Storage model:** describes the layout of a data structure in **physical storage** (local disk, removable media, or network-accessible storage).
+- **Data model:** captures the most important **logical aspects** of a data structure in a database.
+
+Three types: **File storage, Volume (block) storage, Object storage.**
+
+### 5.1 File storage
+
+- Stores data in a **hierarchy of files and folders**.
+- Uses standard protocols: **NFS** (Network File System) or **SMB** (Server Message Block).
+- Easy to organize and share. Ideal for shared documents, media files, shared repositories.
+- **Example:** Amazon EFS.
+
+### 5.2 Volume storage (block storage)
+
+- Also called **block storage**. Supports read/write operations and holds system files of running virtual machines.
+- Mainly deployed in **SAN (Storage Area Network)** architectures.
+- Lets a server's operating system use blocks **as individual hard drives**.
+- Files are split into **equal, fixed-size blocks**, each with its **own address**. Blocks have **no metadata** (unlike objects) and are spread across storage nodes.
+- Used for **databases, email servers, virtual machines**.
+- **AWS EBS** (Elastic Block Store): volume is accessed from an **EC2** instance over an AWS shared or dedicated network.
+- **Snapshot** feature: an **incremental** point-in-time backup of the volume.
+
+### 5.3 Object storage ("Web-scale NAS")
+
+- Built for **unstructured data**: videos, photos, audio, collaborative files.
+- Data is stored in **containers called buckets**, not in a file hierarchy.
+- Each object has **data + metadata + unique identifier**.
+- Good for **cloud-native applications** that share data between different VMs.
+- **Example:** Amazon S3 gives a single namespace across a region.
+- Accessed through an **HTTP(S)** interface. Keeps **file revisions** (versioning). Virtually **unlimited** storage.
+- **Disadvantage:** objects are spread over nodes, so to modify a file you must **upload a new version of the whole object**, which can hurt performance.
+
+### Comparison
+
+| Aspect | File | Block (volume) | Object |
+| --- | --- | --- | --- |
+| Structure | Files and folders | Fixed-size blocks with addresses | Objects in buckets (flat) |
+| Metadata | Basic | **None** | **Rich metadata** |
+| Protocol | NFS, SMB | SAN (iSCSI, FC) | HTTP(S) REST |
+| Best for | Shared documents | Databases, VMs, email servers | Photos, videos, backups, big data |
+| Modify | Edit in place | Edit block | Replace the whole object |
+| Example | Amazon EFS | Amazon EBS | Amazon S3 |
+
+## 6. File system vs database (for storing files)
+
+| Advantages of file system | Disadvantages of file system |
+| --- | --- |
+| **Better performance** than DB for large files (a `Select *` in a DB would also load file data) | **Loosely packed:** no **ACID** guarantee (Atomicity, Consistency, Isolation, Durability). You may not know if a file was deleted |
+| **Simple save and download** (Save As, or a URL to the file location) | **Low security:** folders need write permission, so more exposed to hacking |
+| **Easy migration:** copy and paste the folder (with write permission at destination) |  |
+| **Cost effective:** cheaper to expand a web server than to pay for some databases |  |
+| **Easy move to cloud storage** later (Amazon S3, CDN) |  |
+
+## 7. Distributed File System (DFS)
+
+- A file system **distributed over multiple file servers or locations**.
+- Programs access remote files **as if they were local**, from any network or computer.
+- **Main purpose:** let users of physically distributed systems **share data and resources** through a common file system.
+- Servers keep **full control of the data** and give access control to clients.
+- A group of workstations and mainframes connected by a **LAN** is a typical DFS configuration.
+- DFS runs as **part of the operating system**.
+- **Examples:** HDFS, Google File System (GFS), Ceph, Amazon EFS.
+- **Diagram idea:** Client 1, 2, 3 → NFS server → Data on storage devices.
+
+## 8. Google File System (GFS)
+
+- A **scalable distributed file system for large distributed applications**.
+- Gives **fault tolerance, reliability, scalability, availability, and performance**.
+- Files are organized **hierarchically in directories**, identified by **path-names**.
+- Supports create, delete, open, close, read, write.
+- Files are divided into **fixed-size chunks**.
+
+```mermaid
+flowchart LR
+  APP[Application + GFS client] -- "1 file name, chunk index" --> M[GFS Master: metadata]
+  M -- "2 chunk handle + locations" --> APP
+  APP == "3 chunk handle, byte range" ==> CS1[Chunkserver 1]
+  CS1 == "4 chunk data" ==> APP
+  M -. "instructions / state" .-> CS1
+  M -. "instructions / state" .-> CS2[Chunkserver 2]
+```
+
+*Thin arrows = control messages. Thick arrows = data messages.*
+
+| Component | Role |
+| --- | --- |
+| **Master** (single) | Keeps **all metadata**: namespace, access control info, file → chunk mapping, current chunk locations. Periodically sends instructions to chunkservers and collects their state |
+| **Chunkservers** (many) | Store chunks on **local disks as Linux files**. Each chunk **replicated on multiple chunkservers, default 3 replicas** (user can change) |
+| **GFS client** | Code linked into each application. Implements the file system API. Talks to master for **metadata only**, and **directly to chunkservers for data** |
+
+**3 types of metadata in the master:**
+1. File and chunk **namespaces**
+2. Filename → **array of chunk handles**
+3. Chunk handle → **list of chunkservers, primary chunkserver, chunk version number**
+
+## 9. Hadoop Distributed File System (HDFS)
+
+- A distributed file system for **large data sets on commodity (low-cost) hardware**.
+- **Highly fault-tolerant**, gives **high throughput** access, suited for large data sets.
+- Originally built as infrastructure for the **Apache Nutch** web search engine project.
+- **Master/slave architecture.**
+
+```mermaid
+flowchart TB
+  C[Client] -- "metadata ops" --> NN[NameNode: metadata]
+  NN -- "block ops" --> DN1[DataNode, Rack 1]
+  NN -- "block ops" --> DN2[DataNode, Rack 2]
+  C -- "read / write blocks" --> DN1
+  DN1 -- "replication" --> DN2
+```
+
+| Component | Role |
+| --- | --- |
+| **NameNode** (master) | Regulates file access for clients. Manages DataNodes and assigns tasks. Does **namespace operations**: open, close, rename files and directories. Stores metadata (name, replicas, path) |
+| **DataNode** (slave) | Actual worker nodes that **store data** and **serve read and write requests**. Do **block creation, deletion, replication** on NameNode's instruction |
+| **Replication** | Each block is **duplicated** on different DataNodes. Once written to one DataNode, it copies to others until the required replica count is reached |
+| **Rack** | DataNodes are grouped in racks connected by a **single switch**. HDFS tries to place **at least 1 replica in a different rack**, so data stays available if a switch or rack fails |
+
+### GFS vs HDFS (terminology)
+
+| GFS | HDFS |
+| --- | --- |
+| Master | NameNode |
+| Chunkserver | DataNode |
+| Chunk (64 MB) | Block (128 MB default) |
+| Default 3 replicas | Default 3 replicas |
+| Google proprietary | Open source (Apache) |
+
+## 10. Data replication
+
+**Replication** = creating and maintaining **multiple copies of the same data** on different servers or locations.
+
+**Why replicate?**
+- **High availability:** system runs even if one server fails.
+- **Fault tolerance:** prevents data loss in hardware crashes.
+- **Latency reduction:** data placed closer to users.
+- **Scalability:** read requests spread across machines.
+
+### Types
+
+| Type | How it works | Pros / Cons | Example |
+| --- | --- | --- | --- |
+| **Synchronous** | Data copied to replicas **immediately**. Operation confirmed after required replicas updated | **Strong consistency**, but higher latency | Banking transactions |
+| **Asynchronous** | Data copied **after** the primary update | **Faster response**, but replicas may briefly hold **old data** | Social media |
+
+### Replication strategies
+
+| Strategy | How it works | Pros | Cons |
+| --- | --- | --- | --- |
+| **Single-leader (master-slave)** | One node accepts all writes, copies to followers. Followers serve reads | Simple, **no write conflicts** | Leader is a **single point of failure** for writes |
+| **Multi-leader (master-master)** | Many nodes accept writes and sync with each other | Good across multiple data centers | Needs **complex conflict resolution** for concurrent writes |
+| **Leaderless (quorum-based)** | Client writes to many nodes at once. Success needs a **majority (quorum)** | Very resilient to node failure | High network traffic, relies on version vectors |
+
+## 11. CAP theorem
+
+A distributed system can guarantee **only two of three** at the same time:
+
+| Letter | Meaning |
+| --- | --- |
+| **C: Consistency** | Every read gets the **latest write**, or an error |
+| **A: Availability** | Every non-failing node returns a **non-error response** |
+| **P: Partition tolerance** | System keeps working despite **network communication drops** |
+
+## 12. Consistency models
+
+**Consistency model:** defines **when and how updates to replicated data become visible** to users. In short: do different copies show the same value at a given time?
+
+| Model | Meaning | Example |
+| --- | --- | --- |
+| **Strong** | All users see the latest data **immediately** after commit | Banking |
+| **Eventual** | Replicas may differ for a while but **eventually become the same** | Social media |
+| **Causal** | Related operations are seen in the **same logical order** | Messaging |
+| **Read-your-writes** | A user **immediately sees their own updates** | Profile update |
+| **Monotonic reads** | Once you see newer data, you **never see an older version** later | Cloud apps |
+
+**Strong vs eventual**
+
+| Strong | Eventual |
+| --- | --- |
+| Update → all replicas updated → read latest | Update → primary updated → replicas updated gradually |
+| More accurate | Faster, highly scalable |
+| Higher coordination and latency | Temporary differences possible |
+| Critical transactions | Less critical apps |
+
+**Example:** you change your name from "Rahul" to "Ravi". Strong: all servers show Ravi at once. Eventual: one server may show Ravi while another still shows Rahul, then all sync to Ravi.
+
+> **Replication = multiple copies. Consistency = how those copies stay in sync.**
+
+## 13. Backup
+
+- Making a **copy of important data stored separately**, so it can be restored if the original is lost or damaged.
+- **Example:** a university backs up student records to cloud storage. If the database is deleted, restore from backup.
+- **Purpose:** protect against accidental deletion, hardware failure, malware, system errors.
+
+| Type | What it copies |
+| --- | --- |
+| **Full** | **All** data |
+| **Incremental** | Only data changed **since the last backup** (of any type) |
+| **Differential** | Data changed **since the last full backup** |
+
+## 14. Disaster recovery (DR)
+
+- Restoring **data, applications, and IT services** after a major failure.
+- **Possible disasters:** server failure, cyberattack, data-center failure, natural disaster, hardware/software failure.
+- **Example:** if a cloud data center goes down, restore the app from backup data in another available data center.
+
+| Backup | Disaster recovery |
+| --- | --- |
+| Creates copies of data | Restores services after failure |
+| Mainly protects **data** | Protects **data + applications + services** |
+| Used for data restoration | Used for business/service **continuity** |
+
+> **Backup = save a copy. DR = get the system running again.**
+
+## 15. Scalability
+
+- Ability of a cloud system to **increase or decrease resources according to workload**.
+- **Example:** an online exam portal has 500 users normally and 10,000 during exams. Cloud resources are increased for the peak.
+
+| Type | Meaning | Example |
+| --- | --- | --- |
+| **Vertical (scale up/down)** | Change the **power of an existing server** | 4 GB RAM → 16 GB RAM |
+| **Horizontal (scale out/in)** | **Add or remove servers** | 2 servers → 5 servers |
+
+**Why important:** handles growing users and data, improves performance, avoids resource wastage, supports business growth, manages variable workloads.
+
+## 16. Introduction to DevOps
+
+- **DevOps = Development + Operations.** A set of practices, tools, and principles that helps development and operations teams **work together** to develop, test, deploy, and maintain software **faster and more reliably**.
+
+| Without DevOps | With DevOps |
+| --- | --- |
+| Developers write code, operations deploy **manually** | Teams **collaborate** |
+| Testing takes long | Testing and deployment **automated** |
+| Deployment errors cause downtime | New versions released quickly |
+|  | **Monitoring** detects problems automatically |
+
+**Lifecycle:** Plan → Code → Build → Test → Release → Deploy → Operate → Monitor (then loops back to Plan).
+
+| Tool | Purpose |
+| --- | --- |
+| **Git / GitHub** | Version control |
+| **Jenkins** | CI/CD automation |
+| **Docker** | Containerization |
+| **Kubernetes** | Container orchestration |
+| **Ansible** | Configuration management |
+| **Terraform** | Infrastructure as Code |
+
+## 17. ML on cloud
+
+- Using **cloud computing resources for machine learning**. ML needs lots of **data, computing power, storage, and GPUs**. Instead of buying costly hardware, rent it from the cloud.
+- **Example flow (satellite image water-body detection):** Satellite images → Cloud storage → ML model training → Trained model → Prediction. With 1 million images, store them in cloud storage and train a deep learning model on a cloud GPU.
+- Cloud provides: large storage, powerful CPU/GPU, ML tools, model training, model deployment, scalability.
+
+**Advantages:** high computing power, scalability, large storage, cost saving, easy deployment.
+
+*Examples of services (added):* AWS SageMaker, Azure Machine Learning, Google Vertex AI.
+
+## 18. Edge computing
+
+- Processing data **close to where it is generated** instead of sending everything to a central cloud data center.
+- **Smart traffic camera example:**
+  - Cloud: Camera → Internet → Cloud → Processing → Result → Camera (**delay**)
+  - Edge: Camera → Edge device → Processing → Result (**fast**)
+
+**Applications:** smart cities, autonomous vehicles, healthcare monitoring, industrial IoT, smart cameras, real-time traffic management, smart factories.
+
+**Advantages:** **low latency**, **reduced bandwidth**, **real-time processing**, **better reliability** with limited connectivity, **better privacy** (local processing).
+
+| Cloud computing | Edge computing |
+| --- | --- |
+| Centralized data centers | Near the data source |
+| Higher network dependency | Lower network dependency |
+| May have higher latency | Low latency |
+| Large-scale processing | Real-time applications |
+| Example: cloud ML training | Example: smart camera detecting objects |
